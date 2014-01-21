@@ -1,0 +1,15 @@
+from django.db import models
+
+{% for c in class_list %}
+
+class {{c.class_name()}}(models.Model):
+    {% for f in c.get_all_fields() -%}
+    {{f}} = models.{{f.field_class()}}({% for fop in c.field_options() %}{{fop}},{% endfor %})
+    {% endfor %}
+    
+    {% if c.get_str_attribute() %}
+    def __unicode__(self):
+        return self.{{c.get_str_attribute()}}
+    {%endif%}
+
+{% endfor %}
