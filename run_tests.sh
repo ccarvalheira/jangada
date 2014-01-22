@@ -9,7 +9,7 @@ coverage html --omit="*/migrations/*"
 mkdir htmllint
 cd ..
 
-pylint --ignore=migrations meta -f html > meta/htmllint/pylint.html
+#pylint --ignore=migrations meta -f html > meta/htmllint/pylint.html
 
-firefox meta/htmllint/pylint.html
-firefox meta/htmlcov/index.html
+#firefox meta/htmllint/pylint.html
+#firefox meta/htmlcov/index.html

@@ -7,12 +7,13 @@ from django.db.models import Q
 class Pip(models.Model):
     name = models.CharField(max_length=50)
     description = models.TextField(blank=True,null=True)
-    installed_apps_text = models.TextField()
+    installed_apps_text = models.TextField(blank=True, null=True)
     requirements_pkg_name = models.CharField(max_length=50)
     requirements_version = models.CharField(max_length=10,blank=True,null=True)
     hard_config = models.TextField(blank=True,null=True)
     soft_config = models.TextField(blank=True,null=True)
-
+    syspackages_needed = models.TextField(blank=True, null=True)
+    
     def __unicode__(self):
         return self.name
 
@@ -31,24 +32,26 @@ class Pip(models.Model):
 class App(models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=50, blank=True, null=True)
+    url_prefix = models.CharField(max_length=100, blank=True, null=True)
 
     def __unicode__(self):
         return self.name
 
     def get_sane_name(self,replace_value="_"):
-        return self.name.replace(" ",replace_value)
+        return self.name.strip().replace(" ",replace_value)
 
     def models_file_content(self):
         """using template"""
         con = {}
-        con["class_list"] = self.classmodel_set.all()
+        #attempt to avoid model fk dependency
+        con["class_list"] = sorted(self.classmodel_set.all(), key=lambda num: len(num.relationship_fields_set.all()), reverse=True)
         models_file = render_to_string("models_template.jinja", con)
         return models_file
 
     def admin_file_content(self):
         """using templates"""
         con = {}
-        con["class_list"] = self.classmodel_set.all().order_by("-relationship_fields_set").order_by("name")
+        con["class_list"] = self.classmodel_set.filter(register_admin=True).order_by("-relationship_fields_set").order_by("name")
         admin_file = render_to_string("admin_template.jinja", con)
         return admin_file
 
@@ -89,7 +92,7 @@ class ClassModel(models.Model):
     def admin_register(self):
         """ Returns a dictionary with keys class_name,admin_name to be registered in the admin.
             Returns False if it's an inline class. (so it's not registered"""
-        if "Inline" not in self.admin_name():
+        if "Inline" not in self.admin_name() and self.register_admin:
             return {"class_name":self.class_name(), "admin_name":self.admin_name()}
         return False
         #aregister = "admin.site.register("+self.class_name()+", "+self.admin_name()+")"
@@ -114,7 +117,10 @@ class ClassModel(models.Model):
 
     def get_all_fields(self):
         """ Returns all fields of this class. """
-        return c.regular_fields_set.all() | c.relationship_this_class_set.all()
+        fields = [f for f in self.regular_fields_set.all()]
+        for f1 in self.relationship_this_class_set.all():
+            fields.append(f1)
+        return fields
 
 
     def get_inlines(self):
@@ -171,7 +177,7 @@ class RelationshipFieldModel(GenericFieldModel):
     def field_options(self):
         """ Returns list of field options. If more are needed, insert ifs/elifs. """
         opt = [op for op in self.base_field_options()]
-        opt.append(self.target_class.class_name()) #the class name referenced
+        opt = [self.target_class.class_name()] + opt #the class name referenced
         return opt
 
     def field_class(self):
@@ -185,16 +191,6 @@ class RelationshipFieldModel(GenericFieldModel):
             keytype = "ForeignKey" #you never know...
         return keytype
 
-    def field_definition(self):
-        opt = [op for op in self.base_field_options()]
-        if self.key_type == "fk":
-            keytype = "ForeignKey"
-        elif self.key_type == "m2m":
-            keytype = "ManyToManyField"
-        else:
-            keytype = "ForeignKey" #you never know...
-        definition = "%s(%s,%s)" % (keytype, self.target_class.final_class_name(), ",".join(options))
-        return definition
 
 class FieldModel(GenericFieldModel):
     this_class = models.ForeignKey(ClassModel, related_name="regular_fields_set")
@@ -237,41 +233,7 @@ class FieldModel(GenericFieldModel):
 
         return opt
 
-"""
-    #TODO needs rework
-    def field_definition(self):
-        definition = ""
-        options = []
-        if self.field_type.startswith("char"):
-            definition += "CharField"
-            options.append("max_length="+self.field_type.split()[1])
-        elif self.field_type.startswith("date"):
-            definition += "Date"
-            if self.field_type.startswith("datetime"):
-                definition += "Time"
-            definition += "Field"
-            if len(self.field_type.split()) > 1 and self.field_type.split()[1] == "autonow":
-                options.append("auto_now_add=True")
-        elif self.field_type == "int":
-            definition += "IntegerField"
-        elif self.field_type == "txt":
-            definition += "TextField"
-        elif self.field_type == "bool":
-            definition += "BooleanField"
-        #field options
-        if self.is_blank:
-            options.append("blank=True")
-        if self.is_null:
-            options.append("null=True")
-        if self.editable:
-            options.append("editable=True")
-        if self.default:
-            options.append("default=%s" % self.default)
-        definition += "("+",".join(options)+")"
-        return definition
-"""
-
-class Projecto(models.Model):
+class Project(models.Model):
     name = models.CharField(max_length=50)
     used_pips = models.ManyToManyField(Pip)
     used_apps = models.ManyToManyField(App)
@@ -280,18 +242,18 @@ class Projecto(models.Model):
         return self.name
 
     def get_sane_name(self, replace_value="_"):
-        return self.name.replace(" ", replace_value)
+        return self.name.strip().replace(" ", replace_value)
 
     def used_pips_installed_apps(self):
-        return [ap for ap in p.installed_apps_list() for p in self.used_pips.all()]
+        return [ap for p in self.used_pips.all() for ap in p.installed_apps_list() if ap]
 
     def settings_file_content(self):
         con = {}
         con["language"] = "pt-pt"
         con["use_i18n"] = "True"
         con["use_l10n"] = "True"
-        con["used_pips"] = self.used_pips_installed_apps.all()
-        con["used_apps"] = self.used_apps()
+        con["used_pips"] = self.used_pips_installed_apps()
+        con["used_apps"] = self.used_apps.all()
         con["project_name"] = self.get_sane_name()
         settings_file = render_to_string("settings_template.jinja", con)
         return settings_file
@@ -313,7 +275,65 @@ class Projecto(models.Model):
         return render_to_string("requirements_template.jinja", con)
 
 
+FORM_FIELD_CHOICES = (
+    ("char 10", "CharField 10",),
+    ("char 20", "CharField 20"),
+    ("char 50", "CharField 50"),
+    ("char 100", "CharField 100"),
+    ("char 200", "CharField 200"),
+    ("int", "IntegerField"),
+    ("txt", "TextField"),
+    ("bool", "BooleanField",),
+    ("datetime autonow", "DateTime autonow"),
+    ("datetime", "DateTime"),
+    ("date autonow", "Date now"),
+    ("date", "Date"),
+)
+
+class FormModel(models.Model):
+    name = models.CharField(max_length=50)
+    app = models.ForeignKey(App)
+    
+    def __unicode__(self):
+        return self.name
+        
+
+class FormFieldModel(GenericFieldModel):
+    form_model = models.ForeignKey(FormModel)
+    field_type = models.CharField(max_length=20, choices=FORM_FIELD_CHOICES)
+
+
+VIEW_TYPE_CHOICES = (
+    ("tv", "TemplateView"),
+    ("fv", "FormView"),
+    )
+    
+
 class ViewModel(models.Model):
     name = models.CharField(max_length=50)
-    pass
+    app = models.ForeignKey(App)
+    #urls.py
+    url_regex = models.CharField(max_length=100, blank=True, null=True)
+    #urls.py
+    override_url_prefix = models.BooleanField(default=False)
+    view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES)
+    
+    #only used with formview
+    form_class = models.ForeignKey(FormModel, null=True, blank=True)
+    success_url = models.CharField(max_length=100, null=True, blank=True)
+    
+    template_name = models.CharField(max_length=100)
+    
+    def __unicode__(self):
+        return self.name
+
+
+class TemplateModel(models.Model):
+    name = models.CharField(max_length=50)
+    
+    def __unicode__(self):
+        return self.name
+
+
+
 

@@ -36,6 +36,7 @@ INSTALLED_APPS = (
     'south',
     'apps.core',
     'django_jinja',
+    'vanilla',
 
 )
 
@@ -78,7 +79,6 @@ else:
 	}
 
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 
@@ -105,8 +105,8 @@ STATIC_ROOT = root('../../static')
 STATIC_URL = '/static/'
 
 
-print env("DATABASE_URL")
-print STATIC_ROOT
-print MEDIA_ROOT
-print root()
+#print env("DATABASE_URL")
+#print STATIC_ROOT
+#print MEDIA_ROOT
+#print root()
 

@@ -45,16 +45,17 @@ def export_project(modeladmin,request,queryset):
     ###TODO
 
     #process apps
+    
+    #write settings
+    fset = open("%s/confs/settings.py" % project_folder, "w")
+    fset.write(p.settings_file_content())
+    fset.close()
+    
     for app in p.used_apps.all():
-        #write settings
-        fset = open("%s/confs/settings.py" % project_folder, "w")
-        fset.write(p.settings_file_content())
-        fset.close()
-
         #using generic venv with django for now! FIXME
         #replace ".." with "%s" and uncomment end of following line
         call_startapp = "cd %s/apps && . ../../../../../env/bin/activate && python ../manage.py startapp %s" % (#project_base_folder,
-            project_folder, app.name)
+            project_folder, app.get_sane_name())
         subprocess.check_call(call_startapp,shell=True)
 
         #write models
@@ -66,8 +67,6 @@ def export_project(modeladmin,request,queryset):
         fadmin = open("%s/apps/%s/admin.py" % (project_folder,app.name),"w")
         fadmin.write(app.admin_file_content()+"\n")
         fadmin.close()
-
-
 
     return
 

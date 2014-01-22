@@ -7,75 +7,7 @@ from apps.core.models import App
 
 from apps.core.models import Pip
 
-"""
-App
-    name = models.CharField(max_length=50)
-    description = models.CharField(max_length=50, blank=True, null=True)
-"""
-
-"""
-ClassModel
-    name = models.CharField(max_length=50)
-    app = models.ForeignKey(App)
-    register_admin = models.BooleanField()
-    is_stacked = models.BooleanField()
-    is_tabular = models.BooleanField()
-"""
-
-"""
-FieldModel
-    name = models.CharField(max_length=50)
-    this_class = models.ForeignKey(ClassModel)
-    field_type = models.CharField(max_length=20,choices=FIELD_CHOICES)
-    is_blank = models.BooleanField()
-    is_null = models.BooleanField()
-    is_str = models.BooleanField()
-    list_display = models.BooleanField()
-    filter_on_this = models.BooleanField()
-    search_on_this = models.BooleanField()
-"""
-
-"""
-FIELD_CHOICES = (
-    ("char 10","CharField 10",),
-    ("char 20","CharField 20"),
-    ("char 50","CharField 50"),
-    ("char 100","CharField 100"),
-    ("int","IntegerField"),
-    ("txt","TextField"),
-    ("bool","BooleanField",),
-    ("datetime autonow","DateTime autonow"),
-    ("date autonow","Date now"),
-    ("datetime","DateTime"),
-    ("date","Date"),
-)
-"""
-
-"""
-class FieldModelTest(TestCase):
-    def setUp(self):
-        app = App(name="myapp",description="asd")
-        app.save()
-
-        tclass = ClassModel(name="post",app=app,register_admin=True,is_stacked=False,is_tabular=False)
-        tclass.save()
-
-        FieldModel.objects.create(name="title",this_class=tclass,
-                                field_type="char 50",is_blank=False,is_null=False,is_str=True,list_display=True,
-                                filter_on_this=False,search_on_this=True)
-        FieldModel.objects.create(name="body",this_class=tclass,
-                                field_type="text",is_blank=False,is_null=False,is_str=False,list_display=False,
-                                filter_on_this=False,search_on_this=False)
-
-
-
-    def test_field_definition_output(self):
-        pass
-
-"""
-
-
-class ClassAppFieldModelTest(TestCase):
+class BaseTestSetUp(TestCase):
     def setUp(self):
         self.app = App(name="myapp",description="asd")
         self.app.save()
@@ -149,6 +81,8 @@ class ClassAppFieldModelTest(TestCase):
         self.f6.save()
 
 
+class ClassAppFieldModelTest(BaseTestSetUp):
+
     def test_field_class(self):
         """ Checks whether the class of the field is correct. """
         self.assertEqual(self.f1.field_class(), "CharField")
@@ -215,6 +149,24 @@ class PipTest(TestCase):
         self.assertItemsEqual(["south","things"], self.p1.installed_apps_list())
         self.assertItemsEqual(["south","other_things"], self.p2.installed_apps_list())
         self.assertItemsEqual(["south"], self.p3.installed_apps_list())
+
+
+
+class AppTest(TestCase):
+    fixtures = ["fixtures/initial_data.json"]
+    
+    def test_sane_name(self):
+        """ Test if name is correctly  """
+        self.spaced_app = App.objects.get(name="spaced app with trailing space ")
+        self.blog = App.objects.get(name="myblog")
+        
+        self.assertEqual(self.spaced_app.get_sane_name(), "spaced_app_with_trailing_space")
+        self.assertEqual(self.blog.get_sane_name(), "myblog")
+    
+    
+
+
+
 
 
 
