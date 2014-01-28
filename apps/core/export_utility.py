@@ -27,7 +27,8 @@ def export_project(modeladmin,request,queryset):
     virtualenv.create_environment("%s/env/" % project_base_folder)
     
     #because installing takes too long...
-    SHOULD_WE_INSTALL_REQUIREMENTS = True
+    #request may timeout!
+    SHOULD_WE_INSTALL_REQUIREMENTS = False
     if SHOULD_WE_INSTALL_REQUIREMENTS:
         #localshop = "-i http://localhost:9000/simple/"
         localshop = ""

@@ -7,8 +7,14 @@ Jangada is a tool that generates a new Django project following the configuratio
 Its intended use is to speed up project creation by generating code and folder structure and promoting the reuse of common components, like packages and apps (since they will be stored in the database for future projects to use).
 
 ## Installation
-git clone it somewhere. You should probably use virtualenv. Then:
+You must use virtualenv. The export utility is VERY sensitive to the virtualenv path! 
 ```bash
+mkdir jangada
+cd jangada
+virtualenv env #it must be name like this...
+source env/bin/activate
+git clone <this repo>
+cd jangada
 pip install -r requirements.txt
 cp .env.example .env
 python manage.py syncdb
@@ -28,13 +34,13 @@ For now Jangada generates models, the respective admin classes, some settings an
 
 To export a project, select it in the list and run the admin action.
 Try exporting the project already in the database to have an idea of what the application does.
-The exporter will generate the project files, create a new virtualenv and install its dependencies, which may take a while.
-(using localshop can significantly speed up your installs, if you do it often; in that case, you will want to check out apps.core.export_utility and look for the variable "localshop" (and also the package on PyPI))
+The exporter will generate the project files and create a new virtualenv. It will not install dependencies because the request may timeout.
 
 To prepare the new project do the following, after you've run the admin action:
 ```bash
 cd generated_projects/tutorial_django/tutorial_django/
 source ../env/bin/activate
+pip install -r requirements.txt
 python manage.py syncdb
 <change Procfile default port>
 honcho start
@@ -45,8 +51,13 @@ You may now navigate to localhost:8001/admin and see the new project working!
 
 ## Future
 Implementing the boilerplate generation for views, forms and urls is planned. In fact you can already see them in the models and the admin, but the features are not yet implemented.
+
+The project template will also be refined.
+
 Some support for template autogeneration and inheritance is a possibility, but I'm not sure how this will connect with the other objects, if at all.
 Packages which must be built against system libraries need those already in place. There is a possibility of automating that too, but you'd need to be a privileged user, so the best Jangada can do is writing an .sh file and ask you to run it.
+
+
 
 ## Other considerations
 The current known good setup is Ubuntu 12.04 with Python 2.7.3 and Django 1.6.1 in a virtualenv (it's what I use...).
