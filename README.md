@@ -41,6 +41,7 @@ To prepare the new project do the following, after you've run the admin action:
 cd generated_projects/tutorial_django/tutorial_django/
 source ../env/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 python manage.py syncdb
 <change Procfile default port>
 honcho start
