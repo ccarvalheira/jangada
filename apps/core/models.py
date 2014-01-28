@@ -249,7 +249,7 @@ class Project(models.Model):
 
     def settings_file_content(self):
         con = {}
-        con["language"] = "pt-pt"
+        con["language"] = "en-uk"
         con["use_i18n"] = "True"
         con["use_l10n"] = "True"
         con["used_pips"] = self.used_pips_installed_apps()
@@ -257,6 +257,13 @@ class Project(models.Model):
         con["project_name"] = self.get_sane_name()
         settings_file = render_to_string("settings_template.jinja", con)
         return settings_file
+    
+    def urlconf_file_content(self):
+        #TODO
+        con = {}
+        con["urls_list"] = []
+        urls_file = render_to_string("urls_template.jinja", con)
+        return urls_file
 
     def get_requirements_list(self):
         """ Returns the list of requirements. """

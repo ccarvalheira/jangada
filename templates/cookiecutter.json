@@ -1,9 +1,0 @@
-{
-	"project_name": "{{project_name|safe}}",
-	"language": "{{language|safe}}",
-	"localization": "{{l8n|safe}}",
-	"internationalization" : "{{i10n|safe}}",
-	"installed_apps": {{installed_apps|safe}},
-	"requirements": {{requirements|safe}}
-
-}

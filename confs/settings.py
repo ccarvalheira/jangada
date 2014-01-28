@@ -1,5 +1,5 @@
 """
-Django settings for meta project.
+Django settings for jangada project.
 
 For more information on this file, see
 https://docs.djangoproject.com/en/1.6/topics/settings/
@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import environ
 root = environ.Path(__file__) -1
-env = environ.Env(DEBUG=(bool, False),)
+env = environ.Env(DEBUG=(bool, False), DATABASE_URL=(str, "sqlite:////"+root("../../")+"/dmaker.db"))
 env.read_env(root('../.env'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -66,17 +66,9 @@ WSGI_APPLICATION = 'confs.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
-if env("DATABASE_URL"):
-	DATABASES = {
-		'default': env.db('DATABASE_URL'),
-	}
-else:
-	DATABASES = {
-	    	'default': {
-        		'ENGINE': 'django.db.backends.sqlite3',
-	 	        'NAME': root('../../db.sqlite3'),
-    		}
-	}
+DATABASES = {   
+    'default': env.db('DATABASE_URL'),
+}
 
 
 # Internationalization
@@ -99,7 +91,7 @@ USE_TZ = True
 MEDIA_ROOT = root('../../media')
 DEV_MEDIA_ROOT = root('../dev_media')
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 
 STATIC_ROOT = root('../../static')
 STATIC_URL = '/static/'

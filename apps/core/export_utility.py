@@ -2,16 +2,7 @@ import subprocess
 
 
 from django.template.loader import render_to_string
-
-"""
-def list_dquot(req):
-        result = "["
-        for r in req:
-            result += '"'+r+'",'
-        result = result[:len(result)-1]
-        result += "]"
-        return result
-"""
+import virtualenv
 
 def export_project(modeladmin,request,queryset):
     p = queryset[0]
@@ -32,30 +23,37 @@ def export_project(modeladmin,request,queryset):
     freq = open("%s/requirements.txt" % project_folder,"w")
     freq.write(p.get_requirements())
     freq.close()
-
-    #create venv and install pips
-    #TODO uncomment with pip install is working
-    #subprocess.check_call("virtualenv %s/env" % project_base_folder, shell = True)
-
-    #TODO
-    #wtf not installing pips...
-    #subprocess.call(". %s/env/bin/activate %% pip install -r %s/requirements.txt -i http://localhost:9000/simple/" % (project_base_folder, project_folder), shell = True)
-
-    #pip freeze and replace requirements file
-    ###TODO
-
-    #process apps
     
+    virtualenv.create_environment("%s/env/" % project_base_folder)
+    
+    #because installing takes too long...
+    SHOULD_WE_INSTALL_REQUIREMENTS = True
+    if SHOULD_WE_INSTALL_REQUIREMENTS:
+        #localshop = "-i http://localhost:9000/simple/"
+        subprocess.call("cd %s && ../env/bin/pip install -r requirements.txt %s"
+                    % (project_folder, localshop), shell=True)
+    
+        #pip freeze and replace requirements file
+        ###TODO
+        VENV_RELATIVE_LOCATION = ""
+    else:
+        VENV_RELATIVE_LOCATION = "../../../"
+    #process apps
     #write settings
     fset = open("%s/confs/settings.py" % project_folder, "w")
     fset.write(p.settings_file_content())
     fset.close()
     
+    #write urlconf
+    furl = open("%s/confs/urls.py" % project_folder, "w")
+    furl.write(p.urlconf_file_content())
+    furl.close()
+    
     for app in p.used_apps.all():
-        #using generic venv with django for now! FIXME
-        #replace ".." with "%s" and uncomment end of following line
-        call_startapp = "cd %s/apps && . ../../../../../env/bin/activate && python ../manage.py startapp %s" % (#project_base_folder,
-            project_folder, app.get_sane_name())
+        #depending on the relative location, we either use the django in this venv or the one
+        #in the newly created venv
+        call_startapp = "cd %s/apps && . %s../../env/bin/activate && python ../manage.py startapp %s" % (#project_base_folder,
+            project_folder, VENV_RELATIVE_LOCATION, app.get_sane_name())
         subprocess.check_call(call_startapp,shell=True)
 
         #write models
