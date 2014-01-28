@@ -30,6 +30,7 @@ def export_project(modeladmin,request,queryset):
     SHOULD_WE_INSTALL_REQUIREMENTS = True
     if SHOULD_WE_INSTALL_REQUIREMENTS:
         #localshop = "-i http://localhost:9000/simple/"
+        localshop = ""
         subprocess.call("cd %s && ../env/bin/pip install -r requirements.txt %s"
                     % (project_folder, localshop), shell=True)
     

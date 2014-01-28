@@ -7,12 +7,13 @@ Jangada is a tool that generates a new Django project following the configuratio
 Its intended use is to speed up project creation by generating code and folder structure and promoting the reuse of common components, like packages and apps (since they will be stored in the database for future projects to use).
 
 ## Installation
-git clone it somewhere. You should probably use virtualenv.
+git clone it somewhere. You should probably use virtualenv. Then:
 ```bash
 pip install -r requirements.txt
 cp .env.example .env
 python manage.py syncdb
 python manage.py loaddata fixtures/initial_data.json
+mkdir generated_projects
 honcho start
 ```
 
@@ -27,9 +28,10 @@ For now Jangada generates models, the respective admin classes, some settings an
 
 To export a project, select it in the list and run the admin action.
 Try exporting the project already in the database to have an idea of what the application does.
-The exporter will generate the project files, create a new virtualenv and install its dependencies, which may take a while. (using localshop can significantly speed up your install; in that case, you will want to check out apps.core.export_utility and look for the variable localshop (and also the package on PyPI))
+The exporter will generate the project files, create a new virtualenv and install its dependencies, which may take a while.
+(using localshop can significantly speed up your installs, if you do it often; in that case, you will want to check out apps.core.export_utility and look for the variable "localshop" (and also the package on PyPI))
 
-To prepare the new project do the following:
+To prepare the new project do the following, after you've run the admin action:
 ```bash
 cd generated_projects/tutorial_django/tutorial_django/
 source ../env/bin/activate
