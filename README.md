@@ -47,15 +47,13 @@ honcho start
 ```
 You may now navigate to localhost:8001 and see the new project working (sort of)!
 The admin is working and the urls already map to the respective views.
-It will complain about missing templates; that's future work.
+The views which have templates connected will render those templates.
 
 ## Future
-Implementing the boilerplate generation for views and forms is planned.
-In fact you can already see them in the models and the admin, but some of the features are not yet implemented.
+Implementing the boilerplate generation forms is planned.
 
 The project template will also be refined.
 
-Some support for template autogeneration and inheritance is a possibility, but I'm not sure how this will connect with the other objects, if at all.
 Packages which must be built against system libraries need them already in place.
 There is a possibility of automating that too, but you'd need to be a privileged user, so the best Jangada can do is to write an .sh file and ask you to run it.
 
