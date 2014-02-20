@@ -11,9 +11,9 @@ You must use virtualenv. The export utility is VERY sensitive to the virtualenv 
 ```bash
 mkdir jangada
 cd jangada
-virtualenv env #it must be name like this...
+virtualenv env #it must be named like this...
 source env/bin/activate
-git clone <this repo>
+git clone https://github.com/ccarvalheira/jangada.git
 cd jangada
 pip install -r requirements.txt
 cp .env.example .env
@@ -30,39 +30,42 @@ Navigate to the admin and login (default port on Procfile is 8000).
 To create a new project, use the admin interface to do so.
 Projects have apps, which have classes (models) which, in turn, have fields.
 Pips are packages on PyPI which are installed by pip.
-For now Jangada generates models, the respective admin classes, some settings and the requirements file.
+For now Jangada generates models, the respective admin classes, some settings, the url confs and the requirements file.
 
 To export a project, select it in the list and run the admin action.
 Try exporting the project already in the database to have an idea of what the application does.
-The exporter will generate the project files and create a new virtualenv. It will not install dependencies because the request may timeout.
+It will not create the virtualenv, just the requirements.txt file.
 
 To prepare the new project do the following, after you've run the admin action:
 ```bash
 cd generated_projects/tutorial_django/tutorial_django/
-source ../env/bin/activate
+<create a virtualenv>
 pip install -r requirements.txt
 cp .env.example .env
 python manage.py syncdb
-<change Procfile default port>
 honcho start
 ```
-Edit the Procfile on tutorial_django/ and change the port (to 8001, for example) so the system won't complain because port 8000 is already in use.
-
-You may now navigate to localhost:8001/admin and see the new project working!
+You may now navigate to localhost:8001 and see the new project working (sort of)!
+The admin is working and the urls already map to the respective views.
+It will complain about missing templates; that's future work.
 
 ## Future
-Implementing the boilerplate generation for views, forms and urls is planned. In fact you can already see them in the models and the admin, but the features are not yet implemented.
+Implementing the boilerplate generation for views and forms is planned.
+In fact you can already see them in the models and the admin, but some of the features are not yet implemented.
 
 The project template will also be refined.
 
 Some support for template autogeneration and inheritance is a possibility, but I'm not sure how this will connect with the other objects, if at all.
-Packages which must be built against system libraries need those already in place. There is a possibility of automating that too, but you'd need to be a privileged user, so the best Jangada can do is writing an .sh file and ask you to run it.
+Packages which must be built against system libraries need those already in place.
+There is a possibility of automating that too, but you'd need to be a privileged user, so the best Jangada can do is writing an .sh file and ask you to run it.
 
 
 
 ## Other considerations
 The current known good setup is Ubuntu 12.04 with Python 2.7.3 and Django 1.6.1 in a virtualenv (it's what I use...).
-The export code uses shell commands directly using the subprocess module. It will likely work on other linuxes, but not on windows.
+The export code uses shell commands directly using the subprocess module.
+It will likely work on other linuxes, but not on windows.
 
-WARNING: The database fields Project.name and App.name are used to create folders in the filesystem. These fields are not (yet) escaped properly, so writing something other than valid names will have unintended consequences, INCLUDING REMOVING SOME DIRECTORY YOU DON'T WANT DELETED. (writing "my cool project" is good, writing "/home/myuser/" is not...)
+WARNING: The database fields Project.name and App.name are used to create folders in the filesystem.
+These fields are not (yet) escaped properly, so writing something other than valid names will have unintended consequences, INCLUDING REMOVING SOME DIRECTORY YOU DON'T WANT DELETED. (writing "my cool project" is good, writing "/home/myuser/" is not...)
 

@@ -10,6 +10,7 @@ from apps.core.models import RelationshipFieldModel
 from apps.core.models import ViewModel
 from apps.core.models import FormModel
 from apps.core.models import FormFieldModel
+from apps.core.models import TemplateModel
 
 from apps.core.export_utility import export_project
 
@@ -53,6 +54,9 @@ class FormModelAdmin(admin.ModelAdmin):
 class ViewModelAdmin(admin.ModelAdmin):
     pass
 
+class TemplateModelAdmin(admin.ModelAdmin):
+    pass
+
 admin.site.register(Pip, PipAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(App, AppAdmin)
@@ -60,6 +64,7 @@ admin.site.register(ClassModel, ClassModelAdmin)
 #admin.site.register(FieldModel, FieldModelAdmin)
 admin.site.register(ViewModel, ViewModelAdmin)
 admin.site.register(FormModel, FormModelAdmin)
+admin.site.register(TemplateModel, TemplateModelAdmin)
 #admin.site.register(RelationshipFieldModel, RelationshipFieldModelAdmin)
 
 

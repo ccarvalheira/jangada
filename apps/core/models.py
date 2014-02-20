@@ -54,6 +54,19 @@ class App(models.Model):
         con["class_list"] = self.classmodel_set.filter(register_admin=True).order_by("-relationship_fields_set").order_by("name")
         admin_file = render_to_string("admin_template.jinja", con)
         return admin_file
+    
+    def views_file_content(self):
+        con = {}
+        con["view_list"] = self.viewmodel_set.all()
+        view_file = render_to_string("views_template.jinja", con)
+        return view_file
+    
+    def urls_file_content(self):
+        con = {}
+        con["view_list"] = self.viewmodel_set.all()
+        con["app"] = self
+        view_file = render_to_string("app_urls_template.jinja", con)
+        return view_file
 
 
 class ClassModel(models.Model):
@@ -255,15 +268,40 @@ class Project(models.Model):
         con["used_pips"] = self.used_pips_installed_apps()
         con["used_apps"] = self.used_apps.all()
         con["project_name"] = self.get_sane_name()
+        con["more_config"] = [pip.hard_config for pip in self.used_pips.all()]
         settings_file = render_to_string("settings_template.jinja", con)
         return settings_file
+    
+    def Procfile_file_content(self, dev=False):
+        con = {}
+        con["dev_proc"] = dev
+        if "django-zurb-foundation" in self.get_requirements_list():
+            con["using_foundation"] = True
+        Procfile_file = render_to_string("Procfile_template.jinja", con)
+        return Procfile_file
     
     def urlconf_file_content(self):
         #TODO
         con = {}
         con["urls_list"] = []
+        con["app_list"] = self.used_apps.all()
+        override = []
+        for a in self.used_apps.all():
+            for over in a.viewmodel_set.filter(override_url_prefix=True):
+                override.append(over)
+        con["override_app_prefix_list"] = override
         urls_file = render_to_string("urls_template.jinja", con)
         return urls_file
+    
+    def example_env_content(self):
+        con = {}
+        con["env_vars"] = []
+        
+        con["env_vars"].append(("DEBUG","True"))
+        con["env_vars"].append(("SECRET_KEY","123abc"))
+        if "honcho" in self.get_requirements_list():
+            con["env_vars"].append(("SERVER_PORT","8001"))
+        return render_to_string("env_example_template.jinja",con)
 
     def get_requirements_list(self):
         """ Returns the list of requirements. """
@@ -314,26 +352,6 @@ VIEW_TYPE_CHOICES = (
     ("tv", "TemplateView"),
     ("fv", "FormView"),
     )
-    
-
-class ViewModel(models.Model):
-    name = models.CharField(max_length=50)
-    app = models.ForeignKey(App)
-    #urls.py
-    url_regex = models.CharField(max_length=100, blank=True, null=True)
-    #urls.py
-    override_url_prefix = models.BooleanField(default=False)
-    view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES)
-    
-    #only used with formview
-    form_class = models.ForeignKey(FormModel, null=True, blank=True)
-    success_url = models.CharField(max_length=100, null=True, blank=True)
-    
-    template_name = models.CharField(max_length=100)
-    
-    def __unicode__(self):
-        return self.name
-
 
 class TemplateModel(models.Model):
     name = models.CharField(max_length=50)
@@ -341,6 +359,32 @@ class TemplateModel(models.Model):
     def __unicode__(self):
         return self.name
 
+class ViewModel(models.Model):
+    name = models.CharField(max_length=50)
+    app = models.ForeignKey(App)
+    #urls.py
+    url_regex = models.CharField(max_length=100, blank=True, null=True)
+    #urls.py
+    override_url_prefix = models.BooleanField(default=False, help_text="Not working")
+    view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES)
+    
+    #only used with formview
+    form_class = models.ForeignKey(FormModel, null=True, blank=True)
+    success_url = models.CharField(max_length=100, null=True, blank=True)
+    
+    #only used with templateview
+    template = models.ForeignKey(TemplateModel, null=True, blank=True)
+    
+    #override_post = models.BooleanField()
+    
+    def __unicode__(self):
+        return self.name
+    
+    def get_class_name(self):
+        return self.name+"View"
 
-
+    def get_view_type(self):
+        if self.view_type == "tv":
+            return "TemplateView"
+        return "FormView"
 

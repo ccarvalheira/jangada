@@ -6,5 +6,12 @@ admin.autodiscover()
 urlpatterns = patterns('',
 
     url(r'^admin/', include(admin.site.urls)),
+    {% for app in app_list %}
+    url(r'^{{app.get_sane_name()}}/', include('apps.{{app.get_sane_name()}}.urls')),
+    {% endfor %}
+    
+    {% for view in override_app_prefix_list %}
+    url(r'{{view.url_regex}}', apps.{{view.app.get_sane_name()}}.{{view.get_class_name()}}.as_view(), name="{{view.name}}"),
+    {%endfor%}
     
 )
