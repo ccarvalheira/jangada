@@ -59,7 +59,13 @@ def export_project(modeladmin,request,queryset):
     write_to_file("%s/confs/settings.py" % project_folder, p.settings_file_content())
 
     write_to_file("%s/confs/urls.py" % project_folder, p.urlconf_file_content())
-
+    
+    try:
+        base_name = p.templatemodel_set.filter(is_base=True)[0].name
+        write_to_file("%s/templates/%s.html" % (project_folder, base_name), p.base_template_content())
+    except IndexError as e:
+        print "The project must have a base template."
+        raise e
     
     for app in p.used_apps.all():
         #depending on the relative location, we either use the django in this venv or the one
@@ -71,13 +77,19 @@ def export_project(modeladmin,request,queryset):
         #    project_folder, VENV_RELATIVE_LOCATION, app.get_sane_name())
         #subprocess.check_call(call_startapp,shell=True)
 
-        write_to_file("%s/apps/%s/models.py" % (project_folder,app.name), app.models_file_content()+"\n")
+        write_to_file("%s/apps/%s/models.py" % (project_folder,app.get_sane_name()), app.models_file_content()+"\n")
 
-        write_to_file("%s/apps/%s/admin.py" % (project_folder,app.name), app.admin_file_content()+"\n")
+        write_to_file("%s/apps/%s/admin.py" % (project_folder,app.get_sane_name()), app.admin_file_content()+"\n")
         
-        write_to_file("%s/apps/%s/views.py" % (project_folder,app.name), app.views_file_content()+"\n")
+        write_to_file("%s/apps/%s/views.py" % (project_folder,app.get_sane_name()), app.views_file_content()+"\n")
         
-        write_to_file("%s/apps/%s/urls.py" % (project_folder,app.name), app.urls_file_content()+"\n")
+        write_to_file("%s/apps/%s/urls.py" % (project_folder,app.get_sane_name()), app.urls_file_content()+"\n")
+        
+        #subprocess.call("cd %s/templates/ && mkdir %s" % (project_folder, app.get_sane_name()), shell=True)
+        
+        for view in app.viewmodel_set.all():
+            write_to_file("%s/templates/%s.html" % (project_folder, view.template.name), view.template.render())
+        
 
     return
 

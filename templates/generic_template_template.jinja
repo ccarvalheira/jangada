@@ -1,0 +1,11 @@
+{% raw %}{% extends {% endraw %}"{{this.extend.name}}.html" {% raw %}%}{% endraw %}
+
+{% for block in block_list %}
+    {% raw %}
+{% block {% endraw %}{{block.name}} {% raw %}%}
+override
+{% endblock %}
+    {% endraw %}
+{% endfor %}
+
+    

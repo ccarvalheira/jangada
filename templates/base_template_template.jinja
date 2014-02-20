@@ -1,0 +1,15 @@
+<html>
+
+<body>
+
+{% for block in block_list %}
+    {% raw %}
+{% block {% endraw %}{{block.name}} {% raw %}%}
+initial
+{% endblock %}
+    {% endraw %}
+{% endfor %}
+
+
+</body>
+</html>

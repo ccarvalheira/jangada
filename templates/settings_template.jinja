@@ -88,6 +88,10 @@ MEDIA_URL = '/media/'
 STATIC_ROOT = root('../../static')
 STATIC_URL = '/static/'
 
+TEMPLATE_DIRS = (
+    root("../templates/"),
+)
+
 {% for conf in more_config %}
 {{conf|safe}}
 {% endfor %}

@@ -318,6 +318,12 @@ class Project(models.Model):
         con = {}
         con["requirements"] = req
         return render_to_string("requirements_template.jinja", con)
+    
+    def base_template_content(self):
+        base = self.templatemodel_set.filter(is_base=True)[0]
+        con = {}
+        con["block_list"] = base.templateblock_set.all()
+        return render_to_string("base_template_template.jinja", con)
 
 
 FORM_FIELD_CHOICES = (
@@ -355,9 +361,27 @@ VIEW_TYPE_CHOICES = (
 
 class TemplateModel(models.Model):
     name = models.CharField(max_length=50)
+    is_base= models.BooleanField()
+    extend = models.ForeignKey("self", blank=True, null=True, help_text="If this template is base, this field will be ignored.")
+    project = models.ForeignKey(Project, blank=True, null=True, help_text="Use only if this is the base model, otherwise leave empty.")
+    #view = models.ForeignKey("ViewModel", blank=True, null=True, help_text="If this template is base, this field will be ignored.")
+    def __unicode__(self):
+        return self.name
+    
+    def render(self):
+        con = {}
+        con["block_list"] = self.templateblock_set.all()
+        con["this"] = self
+        return render_to_string("generic_template_template.jinja", con)
+
+class TemplateBlock(models.Model):
+    name = models.CharField(max_length=50)
+    template = models.ForeignKey(TemplateModel)
     
     def __unicode__(self):
         return self.name
+
+
 
 class ViewModel(models.Model):
     name = models.CharField(max_length=50)
@@ -365,7 +389,7 @@ class ViewModel(models.Model):
     #urls.py
     url_regex = models.CharField(max_length=100, blank=True, null=True)
     #urls.py
-    override_url_prefix = models.BooleanField(default=False, help_text="Not working")
+    override_url_prefix = models.BooleanField(default=False)
     view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES)
     
     #only used with formview

@@ -11,6 +11,7 @@ from apps.core.models import ViewModel
 from apps.core.models import FormModel
 from apps.core.models import FormFieldModel
 from apps.core.models import TemplateModel
+from apps.core.models import TemplateBlock
 
 from apps.core.export_utility import export_project
 
@@ -54,8 +55,11 @@ class FormModelAdmin(admin.ModelAdmin):
 class ViewModelAdmin(admin.ModelAdmin):
     pass
 
+class TemplateBlockInlineAdmin(admin.TabularInline):
+    model = TemplateBlock
+
 class TemplateModelAdmin(admin.ModelAdmin):
-    pass
+    inlines = [TemplateBlockInlineAdmin,]
 
 admin.site.register(Pip, PipAdmin)
 admin.site.register(Project, ProjectAdmin)

@@ -3,7 +3,7 @@ from vanilla import FormView
 
 {% for view in view_list %}
 class {{view.get_class_name()}}({{view.get_view_type()}}):
-    template_name = "{{view.template.name}}"
+    template_name = "{{view.template.name}}.html"
     def get(self, request, *args, **kwargs):
         context = self.get_context_data()
         ###
