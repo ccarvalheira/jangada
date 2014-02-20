@@ -7,11 +7,11 @@ Jangada is a tool that generates a new Django project following the configuratio
 Its intended use is to speed up project creation by generating code and folder structure and promoting the reuse of common components, like packages and apps (since they will be stored in the database for future projects to use).
 
 ## Installation
-You must use virtualenv. The export utility is VERY sensitive to the virtualenv path! 
+You should use something like virtualenv, but it's not mandatory.
 ```bash
 mkdir jangada
 cd jangada
-virtualenv env #it must be named like this...
+virtualenv env
 source env/bin/activate
 git clone https://github.com/ccarvalheira/jangada.git
 cd jangada
@@ -56,9 +56,8 @@ In fact you can already see them in the models and the admin, but some of the fe
 The project template will also be refined.
 
 Some support for template autogeneration and inheritance is a possibility, but I'm not sure how this will connect with the other objects, if at all.
-Packages which must be built against system libraries need those already in place.
-There is a possibility of automating that too, but you'd need to be a privileged user, so the best Jangada can do is writing an .sh file and ask you to run it.
-
+Packages which must be built against system libraries need them already in place.
+There is a possibility of automating that too, but you'd need to be a privileged user, so the best Jangada can do is to write an .sh file and ask you to run it.
 
 
 ## Other considerations
