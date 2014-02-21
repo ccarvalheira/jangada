@@ -3,6 +3,29 @@ from django.db import models
 from django.template.loader import render_to_string
 from django.db.models import Q
 
+from .class_models import *
+from .field_models import *
+
+import re
+
+def write_to_file(file, stri):
+    f = open(file,"w+")
+    f.write(stri)
+    f.close()
+
+
+CSS_FRAMEWORK_CHOICES = (
+    ("fo", "Foundation"),
+    ("bo", "Bootstrap"),
+    )
+
+
+BLOCK_TYPES = (
+    ("head", "head"),
+    ("body", "body"),
+    ("script", "script"),
+    )
+
 
 class Pip(models.Model):
     name = models.CharField(max_length=50)
@@ -33,6 +56,7 @@ class App(models.Model):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=50, blank=True, null=True)
     url_prefix = models.CharField(max_length=100, blank=True, null=True)
+    keep_templates = models.BooleanField(help_text="Check to store this app's templates inside the app folder and not in the projectwide template folder.")
 
     def __unicode__(self):
         return self.name
@@ -40,217 +64,66 @@ class App(models.Model):
     def get_sane_name(self,replace_value="_"):
         return self.name.strip().replace(" ",replace_value)
 
-    def models_file_content(self):
+    def models_file_content(self,language="python"):
         """using template"""
         con = {}
         #attempt to avoid model fk dependency
         con["class_list"] = sorted(self.classmodel_set.all(), key=lambda num: len(num.relationship_fields_set.all()), reverse=True)
-        models_file = render_to_string("models_template.jinja", con)
-        return models_file
+        
+        return render_to_string(language+"/models_template.jinja", con)
+    
+    def models_files(self, language="python"):
+        #find all different files
+        file_list = []
+        for c in self.classmodel_set.all():
+            if c.output_file not in file_list:
+                file_list.append(c.output_file)
+        
+        final_list = []
+        con = {}
+        for f in file_list:
+            con["is_modelspy"] = False
+            if f == "models.py":
+                con["is_modelspy"] = True
+            con["class_list"] = self.classmodel_set.filter(output_file=f)
+            final_list.append((f,render_to_string(language+"/models_template.jinja", con)))
+            #write_to_file("generated_projects/%s/apps/%s/models.py" % (self.project.get_sane_name(),app.get_sane_name()), stri+"\n")
+        return final_list
+            
 
-    def admin_file_content(self):
+    def admin_file_content(self, language="python"):
         """using templates"""
         con = {}
         con["class_list"] = self.classmodel_set.filter(register_admin=True).order_by("-relationship_fields_set").order_by("name")
-        admin_file = render_to_string("admin_template.jinja", con)
-        return admin_file
+        return render_to_string(language+"/admin_template.jinja", con)
     
-    def views_file_content(self):
+    def views_file_content(self, language="python"):
         con = {}
         con["view_list"] = self.viewmodel_set.all()
-        view_file = render_to_string("views_template.jinja", con)
-        return view_file
+        
+        reg = re.compile("<\w+>")
+        param_list = []
+        for v in self.viewmodel_set.all():
+            for match in reg.findall(v.url_regex):
+                match = match[1:-1]
+                param_list.append(match)
+        con["url_params"] = param_list
+        return render_to_string(language+"/views_template.jinja", con)
     
-    def urls_file_content(self):
+    def urls_file_content(self, language="python"):
         con = {}
         con["view_list"] = self.viewmodel_set.all()
         con["app"] = self
-        view_file = render_to_string("app_urls_template.jinja", con)
-        return view_file
+        return render_to_string(language+"/app_urls_template.jinja", con)
 
 
-class ClassModel(models.Model):
-    name = models.CharField(max_length=50)
-    app = models.ForeignKey(App)
-    register_admin = models.BooleanField()
-    is_stacked = models.BooleanField()
-    is_tabular = models.BooleanField()
-
-    requires_pass = True
-
-    def get_str_attribute(self):
-        """ Detects the str attribute of this class. It is the first attribute found, regardless of other attributes found. """
-        return self.regular_fields_set.filter(is_str=True)[0].name
-
-    def __unicode__(self):
-        return self.name
-
-    def class_name(self):
-        """ Returns CamelCase class name. """
-        return self.name.title().replace(" ", "")
-
-    def admin_name(self):
-        """ Returns CamelCase admin class name. """
-        aname = self.class_name()+"Admin"
-        if self.is_stacked or self.is_tabular:
-            aname += "Inline"
-        return str(aname)
-
-    def admin_import(self):
-        """ Returns a dictionary with keys app_name,class_name to be imported in the admin. """
-        return {"app_name": self.app.get_sane_name(), "class_name": self.class_name()}
-        #aimport = "from apps."+self.app.name+".models import "+self.final_class_name()
-        #return aimport
-
-    def admin_register(self):
-        """ Returns a dictionary with keys class_name,admin_name to be registered in the admin.
-            Returns False if it's an inline class. (so it's not registered"""
-        if "Inline" not in self.admin_name() and self.register_admin:
-            return {"class_name":self.class_name(), "admin_name":self.admin_name()}
-        return False
-        #aregister = "admin.site.register("+self.class_name()+", "+self.admin_name()+")"
-        #return aregister
-
-    def admin_class_inherit(self):
-        """ Returns the admin class from which this one inherits. """
-        if self.is_stacked:
-            return "StackedInline"
-        elif self.is_tabular:
-            return "TabularInline"
-        else:
-            return "ModelAdmin"
-
-    def get_admin_fields(self, *args, **kwargs):
-        """ Returns a list of fields to be inserted into various admin class attributes (like list_display, for example).
-            Takes the same **kwargs as FieldModel. """
-        admin_fields = self.regular_fields_set.filter(**kwargs)
-        if admin_fields:
-            self.requires_pass = False
-        return admin_fields
-
-    def get_all_fields(self):
-        """ Returns all fields of this class. """
-        fields = [f for f in self.regular_fields_set.all()]
-        for f1 in self.relationship_this_class_set.all():
-            fields.append(f1)
-        return fields
-
-
-    def get_inlines(self):
-        return self.app.classmodel_set.filter(Q(is_stacked=True) | Q(is_tabular=True))
-
-
-
-
-FIELD_CHOICES = (
-    ("char 10", "CharField 10",),
-    ("char 20", "CharField 20"),
-    ("char 50", "CharField 50"),
-    ("char 100", "CharField 100"),
-    ("char 200", "CharField 200"),
-    ("int", "IntegerField"),
-    ("txt", "TextField"),
-    ("bool", "BooleanField",),
-    ("datetime autonow", "DateTime autonow"),
-    ("datetime", "DateTime"),
-    ("date autonow", "Date now"),
-    ("date", "Date"),
-)
-
-class GenericFieldModel(models.Model):
-    name = models.CharField(max_length=50)
-    is_blank = models.BooleanField()
-    is_null = models.BooleanField()
-
-    def base_field_options(self):
-        opt = []
-        if self.is_blank:
-            opt.append("blank=True")
-        if self.is_null:
-            opt.append("null=True")
-        return opt
-
-    class Meta:
-        abstract = True
-
-    def __unicode__(self):
-        return self.name
-
-KEY_TYPES = (
-    ("fk", "ForeignKey"),
-    ("m2m", "ManyToManyField"),
-)
-
-class RelationshipFieldModel(GenericFieldModel):
-    this_class = models.ForeignKey(ClassModel, related_name="relationship_this_class_set")
-    target_class = models.ForeignKey(ClassModel, related_name="relationship_fields_set")
-    key_type = models.CharField(max_length=30, choices=KEY_TYPES)
-
-
-    def field_options(self):
-        """ Returns list of field options. If more are needed, insert ifs/elifs. """
-        opt = [op for op in self.base_field_options()]
-        opt = [self.target_class.class_name()] + opt #the class name referenced
-        return opt
-
-    def field_class(self):
-        """ Returns the type of relationship. """
-        keytype = ""
-        if self.key_type == "fk":
-            keytype = "ForeignKey"
-        elif self.key_type == "m2m":
-            keytype = "ManyToManyField"
-        else:
-            keytype = "ForeignKey" #you never know...
-        return keytype
-
-
-class FieldModel(GenericFieldModel):
-    this_class = models.ForeignKey(ClassModel, related_name="regular_fields_set")
-    field_type = models.CharField(max_length=20, choices=FIELD_CHOICES)
-    is_str = models.BooleanField()
-    list_display = models.BooleanField()
-    filter_on_this = models.BooleanField()
-    search_on_this = models.BooleanField()
-    default = models.CharField(max_length=200, blank=True)
-    editable = models.BooleanField(default=True)
-
-    def field_class(self):
-        """ Returns the django.models class of the field. When more classes are needed, just insert another elif
-            We could probably use a dictionary lookup with FIELD_CHOICES, but this works for now. """
-        t = ""
-        if self.field_type.startswith("char"):
-            t = "CharField"
-        elif self.field_type.startswith("date"):
-            t = "Date"
-            if self.field_type.startswith("datetime"):
-                t += "Time"
-            t += "Field"
-        elif self.field_type == "int":
-            t = "IntegerField"
-        elif self.field_type == "txt":
-            t = "TextField"
-        elif self.field_type == "bool":
-            t = "BooleanField"
-        return t
-
-    def field_options(self):
-        """ Returns list of field options. CharField takes a required option. If other options are added, just make another if. """
-        opt = [op for op in self.base_field_options()]
-        if not self.editable:
-            opt.append("editable=False")
-        if self.default:
-            opt.append("default=\"%s\"" % self.default)
-        if self.field_class() == "CharField":
-            opt.append("max_length=%s" % self.field_type.split()[1])
-
-        return opt
 
 class Project(models.Model):
     name = models.CharField(max_length=50)
     used_pips = models.ManyToManyField(Pip)
     used_apps = models.ManyToManyField(App)
-
+    css_framework = models.CharField(max_length=2, choices=CSS_FRAMEWORK_CHOICES)
+    
     def __unicode__(self):
         return self.name
 
@@ -260,7 +133,7 @@ class Project(models.Model):
     def used_pips_installed_apps(self):
         return [ap for p in self.used_pips.all() for ap in p.installed_apps_list() if ap]
 
-    def settings_file_content(self):
+    def settings_file_content(self, language="python"):
         con = {}
         con["language"] = "en-uk"
         con["use_i18n"] = "True"
@@ -269,19 +142,17 @@ class Project(models.Model):
         con["used_apps"] = self.used_apps.all()
         con["project_name"] = self.get_sane_name()
         con["more_config"] = [pip.hard_config for pip in self.used_pips.all()]
-        settings_file = render_to_string("settings_template.jinja", con)
-        return settings_file
+        return render_to_string(language+"/settings_template.jinja", con)
+
     
     def Procfile_file_content(self, dev=False):
         con = {}
         con["dev_proc"] = dev
         if "django-zurb-foundation" in self.get_requirements_list():
             con["using_foundation"] = True
-        Procfile_file = render_to_string("Procfile_template.jinja", con)
-        return Procfile_file
+        return render_to_string("Procfile_template.jinja", con)
     
-    def urlconf_file_content(self):
-        #TODO
+    def urlconf_file_content(self, language="python"):
         con = {}
         con["urls_list"] = []
         con["app_list"] = self.used_apps.all()
@@ -290,8 +161,7 @@ class Project(models.Model):
             for over in a.viewmodel_set.filter(override_url_prefix=True):
                 override.append(over)
         con["override_app_prefix_list"] = override
-        urls_file = render_to_string("urls_template.jinja", con)
-        return urls_file
+        return render_to_string(language+"/urls_template.jinja", con)
     
     def example_env_content(self):
         con = {}
@@ -319,96 +189,38 @@ class Project(models.Model):
         con["requirements"] = req
         return render_to_string("requirements_template.jinja", con)
     
-    def base_template_content(self):
-        base = self.templatemodel_set.filter(is_base=True)[0]
-        con = {}
-        con["block_list"] = base.templateblock_set.all()
-        return render_to_string("base_template_template.jinja", con)
+    def base_template_content(self, engine="django_templates"):
+        return self.templatemodel_set.filter(is_base=True)[0].base_template_content(engine,self.css_framework)
 
 
-FORM_FIELD_CHOICES = (
-    ("char 10", "CharField 10",),
-    ("char 20", "CharField 20"),
-    ("char 50", "CharField 50"),
-    ("char 100", "CharField 100"),
-    ("char 200", "CharField 200"),
-    ("int", "IntegerField"),
-    ("txt", "TextField"),
-    ("bool", "BooleanField",),
-    ("datetime autonow", "DateTime autonow"),
-    ("datetime", "DateTime"),
-    ("date autonow", "Date now"),
-    ("date", "Date"),
-)
-
-class FormModel(models.Model):
-    name = models.CharField(max_length=50)
-    app = models.ForeignKey(App)
-    
-    def __unicode__(self):
-        return self.name
-        
-
-class FormFieldModel(GenericFieldModel):
-    form_model = models.ForeignKey(FormModel)
-    field_type = models.CharField(max_length=20, choices=FORM_FIELD_CHOICES)
-
-
-VIEW_TYPE_CHOICES = (
-    ("tv", "TemplateView"),
-    ("fv", "FormView"),
-    )
 
 class TemplateModel(models.Model):
     name = models.CharField(max_length=50)
     is_base= models.BooleanField()
     extend = models.ForeignKey("self", blank=True, null=True, help_text="If this template is base, this field will be ignored.")
     project = models.ForeignKey(Project, blank=True, null=True, help_text="Use only if this is the base model, otherwise leave empty.")
-    #view = models.ForeignKey("ViewModel", blank=True, null=True, help_text="If this template is base, this field will be ignored.")
     def __unicode__(self):
         return self.name
     
-    def render(self):
+    def template_file_contents(self, engine="django_templates"):
         con = {}
         con["block_list"] = self.templateblock_set.all()
         con["this"] = self
-        return render_to_string("generic_template_template.jinja", con)
+        return render_to_string(engine+"/generic_template_template.jinja", con)
+
+    def base_template_content(self, engine="django_templates", css_framework="fo"): #alternative fmw is bo
+        con = {}
+        con["block_list"] = self.templateblock_set.all()
+        con["base_template"] = self
+        if css_framework == "bo":
+            return render_to_string(engine+"/bootstrap_base_template_template.jinja", con)
+        return render_to_string(engine+"/foundation_base_template_template.jinja", con)
 
 class TemplateBlock(models.Model):
     name = models.CharField(max_length=50)
     template = models.ForeignKey(TemplateModel)
+    block_type = models.CharField(max_length=6, choices=BLOCK_TYPES, default="body")
     
     def __unicode__(self):
         return self.name
-
-
-
-class ViewModel(models.Model):
-    name = models.CharField(max_length=50)
-    app = models.ForeignKey(App)
-    #urls.py
-    url_regex = models.CharField(max_length=100, blank=True, null=True)
-    #urls.py
-    override_url_prefix = models.BooleanField(default=False)
-    view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES)
-    
-    #only used with formview
-    form_class = models.ForeignKey(FormModel, null=True, blank=True)
-    success_url = models.CharField(max_length=100, null=True, blank=True)
-    
-    #only used with templateview
-    template = models.ForeignKey(TemplateModel, null=True, blank=True)
-    
-    #override_post = models.BooleanField()
-    
-    def __unicode__(self):
-        return self.name
-    
-    def get_class_name(self):
-        return self.name+"View"
-
-    def get_view_type(self):
-        if self.view_type == "tv":
-            return "TemplateView"
-        return "FormView"
 

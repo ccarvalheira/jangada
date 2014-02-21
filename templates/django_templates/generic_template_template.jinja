@@ -2,8 +2,9 @@
 
 {% for block in block_list %}
     {% raw %}
-{% block {% endraw %}{{block.name}} {% raw %}%}
-override
+{% block {% endraw %}{{block.name}} {% raw %}%}{% endraw %}
+block {{block.name}} on {{this.name}}
+{% raw %}
 {% endblock %}
     {% endraw %}
 {% endfor %}

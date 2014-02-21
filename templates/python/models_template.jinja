@@ -1,9 +1,15 @@
 from django.db import models
 
+{% if is_modelspy %}
+    {% for f in files %}
+from .{{f}} import *
+    {% endfor %}
+{% endif %}
+
 {% for c in class_list -%}
 class {{c.class_name()}}(models.Model):
     {% for f in c.get_all_fields() -%}
-    {{f}} = models.{{f.field_class()}}({% for fop in f.field_options() %}{{fop}},{% endfor %})
+    {{f}} = models.{{f.field_class()}}({% for fop in f.field_options() %}{{fop|safe}},{% endfor %})
     {% endfor %}
     {% if c.get_str_attribute() %}
     def __unicode__(self):

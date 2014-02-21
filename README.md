@@ -27,7 +27,7 @@ This will populate the database with some test data and start the server, which 
 
 ## Usage
 Navigate to the admin and login (default port on Procfile is 8000).
-To create a new project, use the admin interface to do so.
+To create a new project use the admin interface.
 Projects have apps, which have classes (models) which, in turn, have fields.
 Pips are packages on PyPI which are installed by pip.
 For now Jangada generates models, the respective admin classes, some settings, the url confs and the requirements file.

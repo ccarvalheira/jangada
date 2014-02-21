@@ -4,8 +4,9 @@
 
 {% for block in block_list %}
     {% raw %}
-{% block {% endraw %}{{block.name}} {% raw %}%}
-initial
+{% block {% endraw %}{{block.name}} {% raw %}%}{% endraw %}
+block {{block.name}} on {{base_template.name}}
+{% raw %}
 {% endblock %}
     {% endraw %}
 {% endfor %}

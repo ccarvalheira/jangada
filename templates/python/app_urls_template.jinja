@@ -1,11 +1,11 @@
 from django.conf.urls import *
 
 {% for view in view_list%}
-from views import {{view.get_class_name()}}
+from views import {{view.class_name()}}
 {%endfor%}
 
 urlpatterns = patterns('apps.{{app.get_sane_name()}}.views',
     {% for view in view_list %}
-    url(r'{{view.url_regex}}', {{view.get_class_name()}}.as_view(), name="{{view.name}}"),
+    url(r'{{view.url_regex|safe}}', {{view.class_name()}}.as_view(), name="{{view.name}}"),
     {% endfor %}
 )

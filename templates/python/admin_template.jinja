@@ -6,7 +6,10 @@ from apps.{{c.admin_import()["app_name"]}}.models import {{c.admin_import()["cla
 
 
 {% for c in class_list %}
-class {{c.admin_name()}}(admin.{{c.admin_class_inherit()}}):
+class {{c.admin_name()}}(admin.
+{%- if c.admin_class_inherit() == "TabularInline" -%}TabularInline
+{%- elif c.admin_class_inherit() == "StackedInline" -%}StackedInline
+{%- elif c.admin_class_inherit() == "ModelAdmin" -%}ModelAdmin{%endif-%}):
     {% if "Inline" in c.admin_class_inherit() %}
     model = {{c.class_name()}}
     {% else %}
