@@ -45,11 +45,12 @@ class Pip(models.Model):
         return self.installed_apps_text.split("\n")
 
     def get_requirements(self):
-        """ Returns the requirements line to be inserted in requirements.txt in the format <pkg_name>[==<pkg_version>] """
-        req = self.requirements_pkg_name
+        """ Returns a tuple of (package name, version). If version is not specified, None is returned instead on the second item of the tuple. """
+
         if self.requirements_version:
-            req += "=="+self.requirements_version
-        return req
+            return (self.requirements_pkg_name, self.requirements_version)
+        return (self.requirements_pkg_name,None)
+
 
 
 class App(models.Model):
@@ -64,15 +65,15 @@ class App(models.Model):
     def get_sane_name(self,replace_value="_"):
         return self.name.strip().replace(" ",replace_value)
 
-    def models_file_content(self,language="python"):
+    def render_models(self):
         """using template"""
         con = {}
         #attempt to avoid model fk dependency
         con["class_list"] = sorted(self.classmodel_set.all(), key=lambda num: len(num.relationship_fields_set.all()), reverse=True)
         
-        return render_to_string(language+"/models_template.jinja", con)
+        return render_to_string("models_template.jinja", con)
     
-    def models_files(self, language="python"):
+    def models_files(self):
         #find all different files
         file_list = []
         for c in self.classmodel_set.all():
@@ -86,18 +87,18 @@ class App(models.Model):
             if f == "models.py":
                 con["is_modelspy"] = True
             con["class_list"] = self.classmodel_set.filter(output_file=f)
-            final_list.append((f,render_to_string(language+"/models_template.jinja", con)))
+            final_list.append((f,render_to_string("models_template.jinja", con)))
             #write_to_file("generated_projects/%s/apps/%s/models.py" % (self.project.get_sane_name(),app.get_sane_name()), stri+"\n")
         return final_list
             
 
-    def admin_file_content(self, language="python"):
+    def render_admin(self):
         """using templates"""
         con = {}
         con["class_list"] = self.classmodel_set.filter(register_admin=True).order_by("-relationship_fields_set").order_by("name")
-        return render_to_string(language+"/admin_template.jinja", con)
+        return render_to_string("admin_template.jinja", con)
     
-    def views_file_content(self, language="python"):
+    def render_views(self):
         con = {}
         con["view_list"] = self.viewmodel_set.all()
         
@@ -108,13 +109,13 @@ class App(models.Model):
                 match = match[1:-1]
                 param_list.append(match)
         con["url_params"] = param_list
-        return render_to_string(language+"/views_template.jinja", con)
+        return render_to_string("views_template.jinja", con)
     
-    def urls_file_content(self, language="python"):
+    def render_urls(self):
         con = {}
         con["view_list"] = self.viewmodel_set.all()
         con["app"] = self
-        return render_to_string(language+"/app_urls_template.jinja", con)
+        return render_to_string("app_urls_template.jinja", con)
 
 
 
@@ -133,7 +134,7 @@ class Project(models.Model):
     def used_pips_installed_apps(self):
         return [ap for p in self.used_pips.all() for ap in p.installed_apps_list() if ap]
 
-    def settings_file_content(self, language="python"):
+    def render_settings(self):
         con = {}
         con["language"] = "en-uk"
         con["use_i18n"] = "True"
@@ -142,17 +143,17 @@ class Project(models.Model):
         con["used_apps"] = self.used_apps.all()
         con["project_name"] = self.get_sane_name()
         con["more_config"] = [pip.hard_config for pip in self.used_pips.all()]
-        return render_to_string(language+"/settings_template.jinja", con)
+        return render_to_string("settings_template.jinja", con)
 
     
-    def Procfile_file_content(self, dev=False):
+    def render_Procfile(self, dev=False):
         con = {}
         con["dev_proc"] = dev
         if "django-zurb-foundation" in self.get_requirements_list():
             con["using_foundation"] = True
         return render_to_string("Procfile_template.jinja", con)
     
-    def urlconf_file_content(self, language="python"):
+    def render_urlconf(self):
         con = {}
         con["urls_list"] = []
         con["app_list"] = self.used_apps.all()
@@ -161,32 +162,30 @@ class Project(models.Model):
             for over in a.viewmodel_set.filter(override_url_prefix=True):
                 override.append(over)
         con["override_app_prefix_list"] = override
-        return render_to_string(language+"/urls_template.jinja", con)
+        return render_to_string("urls_template.jinja", con)
     
-    def example_env_content(self):
+    def render_env(self):
         con = {}
         con["env_vars"] = []
         
-        con["env_vars"].append(("DEBUG","True"))
-        con["env_vars"].append(("SECRET_KEY","123abc"))
-        if "honcho" in self.get_requirements_list():
-            con["env_vars"].append(("SERVER_PORT","8001"))
+        con["env_vars"].append("DEBUG=True")
+        con["env_vars"].append("SECRET_KEY=123abc")
+        if "honcho" in self._get_requirements_list():
+            con["env_vars"].append("SERVER_PORT=8001")
+        for soft_config in [pp.soft_config for pp in self.used_pips.all() if pp.soft_config]:
+            con["env_vars"].append(soft_config)
         return render_to_string("env_example_template.jinja",con)
 
-    def get_requirements_list(self):
+    def _get_requirements_list(self):
         """ Returns the list of requirements. """
         return [p.get_requirements() for p in self.used_pips.all()]
 
-    def get_requirements(self):
-        req = []
-        for pip in self.used_pips.all():
-            line = {}
-            line["package"] = pip.requirements_pkg_name
-            if pip.requirements_version:
-                line["version"] = "=="+pip.requirements_version
-            req.append(line)
+    def render_requirements(self):
+        """
+        Renders the requirements.txt file
+        """
         con = {}
-        con["requirements"] = req
+        con["requirements"] = self._get_requirements_list()
         return render_to_string("requirements_template.jinja", con)
     
     def base_template_content(self, engine="django_templates"):

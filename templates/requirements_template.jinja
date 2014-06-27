@@ -3,5 +3,5 @@ argparse==1.2.1
 distribute==0.6.24
 wsgiref==0.1.2
 {% for r in requirements -%}
-{{r.package}}{{r.version}}
+{{r.0}}{%if r.1%}=={{r.1}}{%endif%}
 {%endfor%}

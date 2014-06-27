@@ -25,7 +25,7 @@ def export_project(modeladmin,request,queryset):
     subprocess.call("mv %s/project_template %s/%s" % (project_base_folder, project_base_folder, project_name), shell = True)
 
     #generate requirements file
-    write_to_file("%s/requirements.txt" % project_folder, p.get_requirements())
+    write_to_file("%s/requirements.txt" % project_folder, p.render_requirements())
     
     #virtualenv.create_environment("%s/env/" % project_base_folder)
     
@@ -50,15 +50,15 @@ def export_project(modeladmin,request,queryset):
     #    if "django-zurb-foundation" in p.get_requirements_list():
     #        subprocess.check_call("cd %s && foundation new foundation" % project_folder,shell=True)
     
-    if "honcho" in p.get_requirements_list():
-        write_to_file("%s/Procfile" % project_folder, p.Procfile_file_content())
-        write_to_file("%s/Procfile_dev" % project_folder, p.Procfile_file_content(dev=True))
+    if "honcho" in p._get_requirements_list():
+        write_to_file("%s/Procfile" % project_folder, p.render_Procfile())
+        write_to_file("%s/Procfile_dev" % project_folder, p.render_Procfile(dev=True))
     
-    write_to_file("%s/.env.example" % project_folder, p.example_env_content())
+    write_to_file("%s/.env.example" % project_folder, p.render_env())
     
-    write_to_file("%s/confs/settings.py" % project_folder, p.settings_file_content())
+    write_to_file("%s/confs/settings.py" % project_folder, p.render_settings())
 
-    write_to_file("%s/confs/urls.py" % project_folder, p.urlconf_file_content())
+    write_to_file("%s/confs/urls.py" % project_folder, p.render_urlconf())
     
     try:
         base_name = p.templatemodel_set.filter(is_base=True)[0].name
@@ -78,14 +78,14 @@ def export_project(modeladmin,request,queryset):
         #subprocess.check_call(call_startapp,shell=True)
 
 
-        write_to_file("%s/apps/%s/models.py" % (project_folder,app.get_sane_name()), app.models_file_content()+"\n")
+        write_to_file("%s/apps/%s/models.py" % (project_folder,app.get_sane_name()), app.render_models()+"\n")
         #app.models_files()
 
-        write_to_file("%s/apps/%s/admin.py" % (project_folder,app.get_sane_name()), app.admin_file_content()+"\n")
+        write_to_file("%s/apps/%s/admin.py" % (project_folder,app.get_sane_name()), app.render_admin()+"\n")
         
-        write_to_file("%s/apps/%s/views.py" % (project_folder,app.get_sane_name()), app.views_file_content()+"\n")
+        write_to_file("%s/apps/%s/views.py" % (project_folder,app.get_sane_name()), app.render_views()+"\n")
         
-        write_to_file("%s/apps/%s/urls.py" % (project_folder,app.get_sane_name()), app.urls_file_content()+"\n")
+        write_to_file("%s/apps/%s/urls.py" % (project_folder,app.get_sane_name()), app.render_urls()+"\n")
         
         #subprocess.call("cd %s/templates/ && mkdir %s" % (project_folder, app.get_sane_name()), shell=True)
         

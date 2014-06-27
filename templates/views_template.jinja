@@ -1,0 +1,18 @@
+from vanilla import TemplateView
+from vanilla import FormView
+
+{% for view in view_list %}
+class {{view.class_name()}}(
+{%- if view.get_view_type() == "template"%}TemplateView
+{%- elif view.get_view_type() == "form" %}FormView{%endif%}):
+    template_name = "{{view.template.name}}.html"
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data()
+        {% for param in url_params %}
+        {{param}} = self.kwargs["{{param}}"]
+        {% endfor %}
+        ###
+        #TODO: your custom code goes here
+        ###
+        return self.render_to_response(context)
+{% endfor %}

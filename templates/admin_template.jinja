@@ -1,0 +1,56 @@
+from django.contrib import admin
+
+{% for c in class_list -%}
+from apps.{{c.admin_import()["app_name"]}}.models import {{c.admin_import()["class_name"]}}
+{% endfor %}
+
+
+{% for c in class_list %}
+class {{c.admin_name()}}(admin.
+{%- if c.admin_class_inherit() == "TabularInline" -%}TabularInline
+{%- elif c.admin_class_inherit() == "StackedInline" -%}StackedInline
+{%- elif c.admin_class_inherit() == "ModelAdmin" -%}ModelAdmin{%endif-%}):
+    {% if "Inline" in c.admin_class_inherit() %}
+    model = {{c.class_name()}}
+    {% else %}
+    {% if c.get_admin_fields(list_display=True) %}
+    list_display = (
+    {%- for list_d in c.get_admin_fields(list_display=True) -%}
+    "{{list_d.name}}",
+    {%endfor%})
+    {% endif %}
+    
+    {% if c.get_admin_fields(filter_on_this=True) %}
+    list_filter = (
+    {%- for list_f in c.get_admin_fields(filter_on_this=True) -%}
+    "{{list_f.name}}",
+    {%endfor%})
+    {% endif %}
+    
+    {% if c.get_admin_fields(search_on_this=True) %}
+    search_fields = (
+    {%- for search_f in c.get_admin_fields(search_on_this=True) -%}
+    "{{search_f.name}}",
+    {%endfor%})
+    {% endif %}
+    
+    {% if c.get_inlines() %}
+    inlines = (
+    {%- for inline in c.get_inlines() -%}
+    {{inline.admin_name()}},
+    {%endfor%})
+    {% endif %}
+    
+    {% if c.requires_pass %}
+    pass
+    {% endif %}
+    
+    {% endif %} 
+{% endfor %}
+
+{%- for c in class_list -%}
+{% if c.admin_register() %}
+admin.site.register({{c.admin_register()["class_name"]}}, {{c.admin_register()["admin_name"]}})
+{% endif %}
+{% endfor %}
+
