@@ -30,12 +30,13 @@ BLOCK_TYPES = (
 class Pip(models.Model):
     name = models.CharField(max_length=50, help_text="Human readable name.")
     description = models.TextField(blank=True,null=True,help_text="Human readable description.")
-    installed_apps_text = models.TextField(blank=True, null=True, help_text="Line to include in INSTALLED_APPS on settings.py.")
+    installed_apps_text = models.TextField(blank=True, null=True, help_text="Lines to include in INSTALLED_APPS on settings.py.")
     requirements_pkg_name = models.CharField(max_length=50, help_text="Package name to insert in requirements.txt.")
     requirements_version = models.CharField(max_length=10,blank=True,null=True, help_text="Package version.")
     hard_config = models.TextField(blank=True,null=True, help_text="One or more lines to include in settings.py.")
     soft_config = models.TextField(blank=True,null=True, help_text="One or more lines to include in .env.")
     syspackages_needed = models.TextField(blank=True, null=True, help_text="System packages nedded to build this package. Not implemented yet.")
+    urls_config = models.TextField(blank=True, null=True, help_text="Lines to include in the main urls.py. These will be inserted directly in the file, as is. Commas will be inserted at the end of each line.")
     
     def __unicode__(self):
         return self.name
@@ -50,6 +51,9 @@ class Pip(models.Model):
         if self.requirements_version:
             return (self.requirements_pkg_name, self.requirements_version)
         return (self.requirements_pkg_name,None)
+
+    def get_urlconfig_list(self):
+        return [conf.strip() for conf in self.urls_config.split("\n")]
 
 
 
@@ -202,6 +206,7 @@ class Project(models.Model):
         con = {}
         con["urls_list"] = []
         con["app_list"] = self.used_apps.all()
+        con["pip_urls_list"] = [pp for pip in self.used_pips.all() if pip.urls_config for pp in pip.get_urlconfig_list()]
         override = []
         for a in self.used_apps.all():
             for over in a.viewmodel_set.filter(override_url_prefix=True):

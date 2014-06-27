@@ -13,5 +13,9 @@ urlpatterns = patterns('',
     {% for view in override_app_prefix_list %}
     url(r'{{view.url_regex|safe}}', apps.{{view.app.get_sane_name()}}.{{view.get_class_name()}}.as_view(), name="{{view.name}}"),
     {%endfor%}
+
+    {% for pip_url in pip_urls_list -%}
+    {{pip_url|safe}},
+    {%endfor%}
     
 )
