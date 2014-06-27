@@ -44,9 +44,12 @@ FORM_FIELD_CHOICES = (
 
 
 class GenericFieldModel(models.Model):
-    name = models.CharField(max_length=50)
-    is_blank = models.BooleanField()
-    is_null = models.BooleanField()
+    """
+    Abstract class for the fields classes.
+    """
+    name = models.CharField(max_length=50, help_text="Name of this field.")
+    is_blank = models.BooleanField(help_text="Whether this field has the attribute 'blank'.")
+    is_null = models.BooleanField(help_text="Whether this field has the attribute 'null'.")
 
     def base_field_options(self):
         opt = []
@@ -67,6 +70,9 @@ class GenericFieldModel(models.Model):
 
 
 class RelationshipFieldModel(GenericFieldModel):
+    """
+    Abstract class for relationship-type fields.
+    """
     this_class = models.ForeignKey("ClassModel", related_name="relationship_this_class_set")
     target_class = models.ForeignKey("ClassModel", related_name="relationship_fields_set")
     key_type = models.CharField(max_length=30, choices=KEY_TYPES)
@@ -91,14 +97,14 @@ class RelationshipFieldModel(GenericFieldModel):
 
 
 class FieldModel(GenericFieldModel):
-    this_class = models.ForeignKey("ClassModel", related_name="regular_fields_set")
-    field_type = models.CharField(max_length=20, choices=FIELD_CHOICES)
-    is_str = models.BooleanField()
-    list_display = models.BooleanField()
-    filter_on_this = models.BooleanField()
-    search_on_this = models.BooleanField()
-    default = models.CharField(max_length=200, blank=True)
-    editable = models.BooleanField(default=True)
+    this_class = models.ForeignKey("ClassModel", related_name="regular_fields_set", help_text="The models to which this field belongs to.")
+    field_type = models.CharField(max_length=20, choices=FIELD_CHOICES, help_text="The type of this field.")
+    is_str = models.BooleanField(help_text="Whether this field is the string representation of this class. Only one field in this class may have this attribute. If more than one, the first will be chosen.")
+    list_display = models.BooleanField(help_text="Whether to include this field in the 'list_display' attribute of the respective admin class.")
+    filter_on_this = models.BooleanField(help_text="Whether to include this field in the 'list_filter' attribute of the respective admin class.")
+    search_on_this = models.BooleanField(help_text="Whether to include this field in the 'search_fields' attribute of the respective admin class.")
+    default = models.CharField(max_length=200, blank=True, help_text="The default value of this field. This value will be taken as is (so if you want a string as the default you should write 'mydefault'.")
+    editable = models.BooleanField(default=True, help_text="Whether this field has the attribute editable.")
 
     def field_class(self):
         """ Returns the django.models class of the field. When more classes are needed, just insert another elif
@@ -125,7 +131,7 @@ class FieldModel(GenericFieldModel):
         if not self.editable:
             opt.append("editable=False")
         if self.default:
-            opt.append("default=\"%s\"" % self.default)
+            opt.append("default=%s" % self.default)
         if self.field_class() == "CharField":
             opt.append("max_length=%s" % self.field_type.split()[1])
 

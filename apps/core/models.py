@@ -28,14 +28,14 @@ BLOCK_TYPES = (
 
 
 class Pip(models.Model):
-    name = models.CharField(max_length=50)
-    description = models.TextField(blank=True,null=True)
-    installed_apps_text = models.TextField(blank=True, null=True)
-    requirements_pkg_name = models.CharField(max_length=50)
-    requirements_version = models.CharField(max_length=10,blank=True,null=True)
-    hard_config = models.TextField(blank=True,null=True)
-    soft_config = models.TextField(blank=True,null=True)
-    syspackages_needed = models.TextField(blank=True, null=True)
+    name = models.CharField(max_length=50, help_text="Human readable name.")
+    description = models.TextField(blank=True,null=True,help_text="Human readable description.")
+    installed_apps_text = models.TextField(blank=True, null=True, help_text="Line to include in INSTALLED_APPS on settings.py.")
+    requirements_pkg_name = models.CharField(max_length=50, help_text="Package name to insert in requirements.txt.")
+    requirements_version = models.CharField(max_length=10,blank=True,null=True, help_text="Package version.")
+    hard_config = models.TextField(blank=True,null=True, help_text="One or more lines to include in settings.py.")
+    soft_config = models.TextField(blank=True,null=True, help_text="One or more lines to include in .env.")
+    syspackages_needed = models.TextField(blank=True, null=True, help_text="System packages nedded to build this package. Not implemented yet.")
     
     def __unicode__(self):
         return self.name
@@ -54,19 +54,27 @@ class Pip(models.Model):
 
 
 class App(models.Model):
-    name = models.CharField(max_length=50)
-    description = models.CharField(max_length=50, blank=True, null=True)
-    url_prefix = models.CharField(max_length=100, blank=True, null=True)
+    name = models.CharField(max_length=50, help_text="Name of the app.")
+    description = models.CharField(max_length=50, blank=True, null=True, help_text="Human readable description of this app.")
+    url_prefix = models.CharField(max_length=100, blank=True, null=True, help_text="URL prefix for the views in this app.")
     keep_templates = models.BooleanField(help_text="Check to store this app's templates inside the app folder and not in the projectwide template folder.")
 
     def __unicode__(self):
         return self.name
 
     def get_sane_name(self,replace_value="_"):
+        """
+        Returns the sanitized name of the App (not really much sanitized yet...)
+        :param replace_value:
+        :return: sane_name
+        """
         return self.name.strip().replace(" ",replace_value)
 
     def render_models(self):
-        """using template"""
+        """
+        Renders the models.py file.
+        :return: models.py file content
+        """
         con = {}
         #attempt to avoid model fk dependency
         con["class_list"] = sorted(self.classmodel_set.all(), key=lambda num: len(num.relationship_fields_set.all()), reverse=True)
@@ -74,6 +82,10 @@ class App(models.Model):
         return render_to_string("models_template.jinja", con)
     
     def models_files(self):
+        """
+
+        :return:
+        """
         #find all different files
         file_list = []
         for c in self.classmodel_set.all():
@@ -93,12 +105,19 @@ class App(models.Model):
             
 
     def render_admin(self):
-        """using templates"""
+        """
+        Renders the admin.py file.
+        :return: admin.py file content
+        """
         con = {}
         con["class_list"] = self.classmodel_set.filter(register_admin=True).order_by("-relationship_fields_set").order_by("name")
         return render_to_string("admin_template.jinja", con)
     
     def render_views(self):
+        """
+        Renders the views.py file.
+        :return: views.py file content
+        """
         con = {}
         con["view_list"] = self.viewmodel_set.all()
         
@@ -112,6 +131,10 @@ class App(models.Model):
         return render_to_string("views_template.jinja", con)
     
     def render_urls(self):
+        """
+        Renders the <app>/urls.py file.
+        :return: <app>/urls.py file content
+        """
         con = {}
         con["view_list"] = self.viewmodel_set.all()
         con["app"] = self
@@ -120,21 +143,34 @@ class App(models.Model):
 
 
 class Project(models.Model):
-    name = models.CharField(max_length=50)
-    used_pips = models.ManyToManyField(Pip)
-    used_apps = models.ManyToManyField(App)
-    css_framework = models.CharField(max_length=2, choices=CSS_FRAMEWORK_CHOICES)
+    name = models.CharField(max_length=50, help_text="Name of the project.")
+    used_pips = models.ManyToManyField(Pip, help_text="List of Pips this project uses.")
+    used_apps = models.ManyToManyField(App, help_text="List of Apps this project uses.")
+    css_framework = models.CharField(max_length=2, choices=CSS_FRAMEWORK_CHOICES, help_text="CSS framework this project uses. Not implemented.")
     
     def __unicode__(self):
         return self.name
 
     def get_sane_name(self, replace_value="_"):
+        """
+        Returns the sanitized name of this project. Not really implemented yet...
+        :param replace_value:
+        :return: sanitized name
+        """
         return self.name.strip().replace(" ", replace_value)
 
     def used_pips_installed_apps(self):
+        """
+        Returns the list of installed apps the pips of this project define.
+        :return: list of all installed apps
+        """
         return [ap for p in self.used_pips.all() for ap in p.installed_apps_list() if ap]
 
     def render_settings(self):
+        """
+        Renders the settings.py file.
+        :return: settings.py file content
+        """
         con = {}
         con["language"] = "en-uk"
         con["use_i18n"] = "True"
@@ -147,6 +183,11 @@ class Project(models.Model):
 
     
     def render_Procfile(self, dev=False):
+        """
+        Renders the Procfile file.
+        :param dev: boolean, whether to generate dev file or not
+        :return: Procfile file content
+        """
         con = {}
         con["dev_proc"] = dev
         if "django-zurb-foundation" in self.get_requirements_list():
@@ -154,6 +195,10 @@ class Project(models.Model):
         return render_to_string("Procfile_template.jinja", con)
     
     def render_urlconf(self):
+        """
+        Renders the confs/urls.py file (main urls.py file)
+        :return: urls.py file content
+        """
         con = {}
         con["urls_list"] = []
         con["app_list"] = self.used_apps.all()
@@ -165,6 +210,10 @@ class Project(models.Model):
         return render_to_string("urls_template.jinja", con)
     
     def render_env(self):
+        """
+        Renders the .env file.
+        :return: .env file content
+        """
         con = {}
         con["env_vars"] = []
         
@@ -182,7 +231,8 @@ class Project(models.Model):
 
     def render_requirements(self):
         """
-        Renders the requirements.txt file
+        Renders the requirements.txt file.
+        :return: requirements.txt file content
         """
         con = {}
         con["requirements"] = self._get_requirements_list()

@@ -13,8 +13,11 @@ VIEW_TYPE_CHOICES = (
     )
 
 class GenericClassModel(models.Model):
-    name = models.CharField(max_length=50)
-    app = models.ForeignKey("App")
+    """
+    Abstract class for the classes models.
+    """
+    name = models.CharField(max_length=50, help_text="App name.")
+    app = models.ForeignKey("App", help_text="The app to which this class belongs.")
     
     def __unicode__(self):
         return self.name
@@ -29,14 +32,14 @@ class GenericClassModel(models.Model):
 
 
 class FormModel(GenericClassModel):
-    output_file = models.CharField(max_length=50, default="forms.py")
+    output_file = models.CharField(max_length=50, default="forms.py", help_text="File to which this class should be written. Not implemented.")
     
 
 class ClassModel(GenericClassModel):
-    register_admin = models.BooleanField()
-    is_stacked = models.BooleanField()
-    is_tabular = models.BooleanField()
-    output_file = models.CharField(max_length=50, default="models.py")
+    register_admin = models.BooleanField(help_text="Whether to register this class in the admin or not.")
+    is_stacked = models.BooleanField(help_text="Whether this class in the admin is StackedInline.")
+    is_tabular = models.BooleanField(help_text="Whether this class in the admin is TabularInline.")
+    output_file = models.CharField(max_length=50, default="models.py", help_text="File to which this class should be written. Not implemented.")
     
     requires_pass = True
 
@@ -96,21 +99,25 @@ class ClassModel(GenericClassModel):
 
 class ViewModel(GenericClassModel):
     #urls.py
-    url_regex = models.CharField(max_length=100, blank=True, null=True)
+    url_regex = models.CharField(max_length=100, blank=True, null=True, help_text="Regex of the URL that triggers this view.")
     #urls.py
-    override_url_prefix = models.BooleanField(default=False)
-    view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES)
+    override_url_prefix = models.BooleanField(default=False, help_text="Views' URLs are prefixed by their app prefix. Set this to True to override this and put the URL of this view in the root path.")
+    view_type = models.CharField(max_length=3, choices=VIEW_TYPE_CHOICES, help_text="The type of this view.")
     
     #only used with formview
-    form_class = models.ForeignKey(FormModel, null=True, blank=True)
-    success_url = models.CharField(max_length=100, null=True, blank=True)
+    form_class = models.ForeignKey(FormModel, null=True, blank=True, help_text="Form to be used with this view. Only used in formview.")
+    success_url = models.CharField(max_length=100, null=True, blank=True, help_text="The success URL to be used with this view. Only used in formview.")
     
     #only used with templateview
-    template = models.ForeignKey("TemplateModel", null=True, blank=True)
+    template = models.ForeignKey("TemplateModel", null=True, blank=True, help_text="Template to be used with this view. Only used with templateview.")
     
-    output_file = models.CharField(max_length=50, default="views.py")
+    output_file = models.CharField(max_length=50, default="views.py", help_text="File to which this class should be written. Not implemented.")
 
     def get_view_type(self):
+        """
+        Returns the view type of this view. "template" for templateview or "form" for formview.
+        :return: view type, string
+        """
         if self.view_type == "tv":
             return "template"
         elif self.view_type == "fv":
