@@ -12,6 +12,9 @@ from apps.core.models import FormModel
 from apps.core.models import FormFieldModel
 from apps.core.models import TemplateModel
 from apps.core.models import TemplateBlock
+from apps.core.models import EnvProfile
+from apps.core.models import EnvField
+
 
 from apps.core.export_utility import export_project
 
@@ -60,6 +63,13 @@ class TemplateBlockInlineAdmin(admin.TabularInline):
 
 class TemplateModelAdmin(admin.ModelAdmin):
     inlines = [TemplateBlockInlineAdmin,]
+    list_filter = ["project"]
+
+class EnvFieldAdmin(admin.TabularInline):
+    model = EnvField
+
+class EnvProfileAdmin(admin.ModelAdmin):
+    inlines = [EnvFieldAdmin,]
 
 admin.site.register(Pip, PipAdmin)
 admin.site.register(Project, ProjectAdmin)
@@ -69,6 +79,7 @@ admin.site.register(ClassModel, ClassModelAdmin)
 admin.site.register(ViewModel, ViewModelAdmin)
 admin.site.register(FormModel, FormModelAdmin)
 admin.site.register(TemplateModel, TemplateModelAdmin)
+admin.site.register(EnvProfile, EnvProfileAdmin)
 #admin.site.register(RelationshipFieldModel, RelationshipFieldModelAdmin)
 
 

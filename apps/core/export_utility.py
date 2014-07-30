@@ -50,9 +50,9 @@ def export_project(modeladmin,request,queryset):
     #    if "django-zurb-foundation" in p.get_requirements_list():
     #        subprocess.check_call("cd %s && foundation new foundation" % project_folder,shell=True)
     
-    if "honcho" in p._get_requirements_list():
-        write_to_file("%s/Procfile" % project_folder, p.render_Procfile())
-        write_to_file("%s/Procfile_dev" % project_folder, p.render_Procfile(dev=True))
+    #if ("honcho",_) in p._get_requirements_list():
+    write_to_file("%s/Procfile" % project_folder, p.render_Procfile())
+    write_to_file("%s/Procfile_dev" % project_folder, p.render_Procfile(dev=True))
     
     write_to_file("%s/.env.example" % project_folder, p.render_env())
     

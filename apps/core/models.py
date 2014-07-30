@@ -14,11 +14,6 @@ def write_to_file(file, stri):
     f.close()
 
 
-CSS_FRAMEWORK_CHOICES = (
-    ("fo", "Foundation"),
-    ("bo", "Bootstrap"),
-    )
-
 
 BLOCK_TYPES = (
     ("head", "head"),
@@ -27,14 +22,35 @@ BLOCK_TYPES = (
     )
 
 
+class EnvProfile(models.Model):
+    name = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        return self.name
+
+class EnvField(models.Model):
+    key = models.CharField(max_length=100)
+    value = models.CharField(max_length=100)
+    env = models.ForeignKey(EnvProfile)
+
+    def __unicode__(self):
+        return self.key + " = " + str(self.value)
+
+    def get_env_line(self):
+        return self.key + "=" + str(self.value)
+
+    def get_settings_line(self):
+        return self.__unicode__()
+
+
 class Pip(models.Model):
     name = models.CharField(max_length=50, help_text="Human readable name.")
     description = models.TextField(blank=True,null=True,help_text="Human readable description.")
     installed_apps_text = models.TextField(blank=True, null=True, help_text="Lines to include in INSTALLED_APPS on settings.py.")
     requirements_pkg_name = models.CharField(max_length=50, help_text="Package name to insert in requirements.txt.")
     requirements_version = models.CharField(max_length=10,blank=True,null=True, help_text="Package version.")
-    hard_config = models.TextField(blank=True,null=True, help_text="One or more lines to include in settings.py.")
-    soft_config = models.TextField(blank=True,null=True, help_text="One or more lines to include in .env.")
+    hard_config = models.ForeignKey(EnvProfile, related_name="pip_hard",blank=True,null=True, help_text="Configuration to be included in settings.py.")
+    soft_config = models.ForeignKey(EnvProfile, related_name="pip_soft",blank=True,null=True, help_text="Configuration to be included in .env.")
     syspackages_needed = models.TextField(blank=True, null=True, help_text="System packages nedded to build this package. Not implemented yet.")
     urls_config = models.TextField(blank=True, null=True, help_text="Lines to include in the main urls.py. These will be inserted directly in the file, as is. Commas will be inserted at the end of each line.")
     
@@ -150,8 +166,9 @@ class Project(models.Model):
     name = models.CharField(max_length=50, help_text="Name of the project.")
     used_pips = models.ManyToManyField(Pip, help_text="List of Pips this project uses.")
     used_apps = models.ManyToManyField(App, help_text="List of Apps this project uses.")
-    css_framework = models.CharField(max_length=2, choices=CSS_FRAMEWORK_CHOICES, help_text="CSS framework this project uses. Not implemented.")
-    
+    env_profile = models.ForeignKey(EnvProfile)
+
+
     def __unicode__(self):
         return self.name
 
@@ -182,7 +199,7 @@ class Project(models.Model):
         con["used_pips"] = self.used_pips_installed_apps()
         con["used_apps"] = self.used_apps.all()
         con["project_name"] = self.get_sane_name()
-        con["more_config"] = [pip.hard_config for pip in self.used_pips.all()]
+        con["more_config"] = [config.get_settings_line() for pip in self.used_pips.all() if pip.hard_config for config in pip.hard_config.envfield_set.all()]
         return render_to_string("settings_template.jinja", con)
 
     
@@ -194,8 +211,8 @@ class Project(models.Model):
         """
         con = {}
         con["dev_proc"] = dev
-        if "django-zurb-foundation" in self.get_requirements_list():
-            con["using_foundation"] = True
+        #if "django-zurb-foundation" in self.get_requirements_list():
+        #    con["using_foundation"] = True
         return render_to_string("Procfile_template.jinja", con)
     
     def render_urlconf(self):
@@ -219,14 +236,12 @@ class Project(models.Model):
         Renders the .env file.
         :return: .env file content
         """
+
         con = {}
-        con["env_vars"] = []
-        
-        con["env_vars"].append("DEBUG=True")
-        con["env_vars"].append("SECRET_KEY=123abc")
-        if "honcho" in self._get_requirements_list():
-            con["env_vars"].append("SERVER_PORT=8001")
-        for soft_config in [pp.soft_config for pp in self.used_pips.all() if pp.soft_config]:
+        con["env_vars"] = [field.get_env_line() for field in self.env_profile.envfield_set.all()]
+
+
+        for soft_config in [config.get_env_line() for pp in self.used_pips.all() if pp.soft_config for config in pp.soft_config.envfield_set.all()]:
             con["env_vars"].append(soft_config)
         return render_to_string("env_example_template.jinja",con)
 
@@ -244,7 +259,9 @@ class Project(models.Model):
         return render_to_string("requirements_template.jinja", con)
     
     def base_template_content(self, engine="django_templates"):
-        return self.templatemodel_set.filter(is_base=True)[0].base_template_content(engine,self.css_framework)
+        return self.templatemodel_set.filter(is_base=True)[0].base_template_content(engine)
+
+
 
 
 
@@ -262,13 +279,11 @@ class TemplateModel(models.Model):
         con["this"] = self
         return render_to_string(engine+"/generic_template_template.jinja", con)
 
-    def base_template_content(self, engine="django_templates", css_framework="fo"): #alternative fmw is bo
+    def base_template_content(self, engine="django_templates"):
         con = {}
         con["block_list"] = self.templateblock_set.all()
         con["base_template"] = self
-        if css_framework == "bo":
-            return render_to_string(engine+"/bootstrap_base_template_template.jinja", con)
-        return render_to_string(engine+"/foundation_base_template_template.jinja", con)
+        return render_to_string(engine+"/generic_base_template.jinja", con)
 
 class TemplateBlock(models.Model):
     name = models.CharField(max_length=50)

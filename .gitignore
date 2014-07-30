@@ -30,5 +30,7 @@ atlassian-ide-plugin.xml
 generated_projects/
 htmllint/
 htmlcov/
+test_projects/
 
+test.sh
 todo.txt
